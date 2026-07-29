@@ -7,15 +7,38 @@ This guide is written for beginners. You do not need prior programming experienc
 - A Mac connected to the internet
 - macOS 12 or newer
 - About 1 GB of free disk space
-- The Wardrobe Studio project folder
 
-## 1. Open Terminal
+## 1. Download the project as a ZIP
+
+1. Open the webpage where the Wardrobe Studio source code is provided.
+2. If it is a GitHub page, click the green **Code** button.
+3. Click **Download ZIP**.
+4. Wait for the download to finish. Safari normally saves it in your **Downloads** folder.
+
+Do not open or edit individual files on the code webpage. Download the complete ZIP so all required files stay together.
+
+## 2. Extract the ZIP
+
+1. Open **Finder**.
+2. Select **Downloads** in the Finder sidebar.
+3. Find the downloaded `.zip` file.
+4. Double-click the ZIP file once.
+5. macOS creates a normal blue folder beside it. Its name may be `wardrobe`, `wardrobe-main`, or similar.
+6. Open that folder and confirm that it contains:
+   - `package.json`
+   - `package-lock.json`
+   - an `app` folder
+   - `README.md`
+
+Use the extracted blue folder in the following steps—not the `.zip` file. You may move the extracted folder somewhere convenient, but do not move individual files out of it.
+
+## 3. Open Terminal
 
 Open **Finder → Applications → Utilities → Terminal**, or press `Command + Space`, type `Terminal`, and press Return.
 
 All commands below are entered in Terminal. Paste one command at a time, then press Return.
 
-## 2. Install Homebrew
+## 4. Install Homebrew
 
 Homebrew installs developer tools safely from Terminal. Paste:
 
@@ -25,7 +48,11 @@ Homebrew installs developer tools safely from Terminal. Paste:
 
 The installer may ask for your Mac login password. The password will not appear while you type; this is normal. Press Return when finished.
 
-At the end, Homebrew may display one or two commands under **Next steps**. Copy and run those commands before continuing. Then confirm Homebrew works:
+The installation can take several minutes. It may ask for your Mac login password. The password will not appear—not even as dots—while you type; this is normal. Type it and press Return.
+
+At the end, carefully look for a **Next steps** section. Homebrew may print one or two commands beginning with `echo` and `eval`. Copy and run each command exactly as shown. These commands make `brew` available in new Terminal windows.
+
+Then confirm Homebrew works:
 
 ```bash
 brew --version
@@ -33,7 +60,9 @@ brew --version
 
 You should see a Homebrew version number.
 
-## 3. Install Node.js
+If Terminal prints a version number, continue. If it prints `command not found`, close Terminal, reopen it, run the Homebrew **Next steps** commands again, and retry.
+
+## 5. Install Node.js
 
 Wardrobe Studio runs with Node.js. Install it using Homebrew:
 
@@ -48,16 +77,20 @@ node --version
 npm --version
 ```
 
-Both commands should print version numbers.
+Both commands must print version numbers before continuing.
 
-## 4. Open the project folder in Terminal
+## 6. Open the extracted project folder in Terminal
 
-Type `cd`, add a space, then drag the **wardrobe** project folder from Finder into the Terminal window. Terminal inserts the correct path automatically. Press Return.
+1. Type `cd` in Terminal.
+2. Type one space after `cd`.
+3. Drag the extracted blue project folder from Finder directly into the Terminal window.
+4. Terminal inserts the folder’s complete path.
+5. Press Return.
 
 It will look similar to:
 
 ```bash
-cd /Users/your-name/Downloads/wardrobe
+cd /Users/your-name/Downloads/wardrobe-main
 ```
 
 Confirm that you are in the correct folder:
@@ -68,7 +101,9 @@ ls
 
 You should see `package.json`, `package-lock.json`, `app`, and this `README.md`.
 
-## 5. Install the project packages
+If those items are not listed, repeat this step and make sure you dragged the extracted folder containing `package.json`, not the ZIP or a parent folder.
+
+## 7. Install the project packages
 
 Run:
 
@@ -76,9 +111,9 @@ Run:
 npm install
 ```
 
-This can take a few minutes the first time. Warnings are usually informational; an actual failure ends with `npm ERR!`.
+Keep Terminal open and wait until the command finishes and a new prompt appears. This can take a few minutes the first time. Warnings are usually informational; an actual failure ends with `npm ERR!`.
 
-## 6. Launch Wardrobe Studio
+## 8. Launch Wardrobe Studio
 
 Run:
 
@@ -86,13 +121,22 @@ Run:
 npm run dev
 ```
 
-Wait until Terminal shows that the server is ready. Open a browser and visit:
+Wait until Terminal shows **Ready** and an address beginning with `http://localhost`. Open Safari, Chrome, or Firefox and visit:
 
 [http://localhost:3000](http://localhost:3000)
 
-Keep the Terminal window open while using the website.
+Keep this Terminal window open while using the website. Closing it stops the local website.
 
-To stop the website, return to Terminal and press `Control + C`. To launch it again later, open Terminal, enter the project folder with `cd`, and run `npm run dev`.
+To stop the website, return to Terminal and press `Control + C`.
+
+To launch it again later:
+
+1. Open Terminal.
+2. Type `cd` followed by a space.
+3. Drag the extracted project folder into Terminal.
+4. Press Return.
+5. Run `npm run dev`.
+6. Open the local address shown in Terminal.
 
 ## Using Wardrobe Studio
 
@@ -109,6 +153,14 @@ To stop the website, return to Terminal and press `Control + C`. To launch it ag
 - Left-drag in 3D: orbit
 - Right-drag: pan
 - Mouse wheel or trackpad scroll: zoom
+- `W` / `S` in 3D: move the camera forward / backward
+- `A` / `D` in 3D: move the camera left / right
+- Quickly press `W` twice and hold the second press: move upward
+- Quickly press `S` twice and hold the second press: move downward
+- `Shift + W`: look upward without moving
+- `Shift + S`: look downward without moving
+- `Shift + A`: look left without moving
+- `Shift + D`: look right without moving
 - Click a section or fitting: select it
 
 ### Wardrobe footprint
@@ -165,8 +217,13 @@ Shortcuts work when a number field or menu is not focused.
 | --- | --- |
 | Arrow keys | Move the selected fitting by 32 mm |
 | Shift + Arrow keys | Move the selected fitting by 128 mm |
+| W / A / S / D | Move the camera in 3D view |
+| W twice / S twice | Hold the second press to move up / down |
+| Shift + W / A / S / D | Look up, left, down, or right without moving |
 | Delete or Backspace | Delete the selected fitting or section |
 | Command + D | Duplicate the selected fitting |
+| Command + Z | Undo the last design change |
+| Command + Shift + Z | Redo the last undone change |
 | Escape | Leave fitting selection and select its section |
 
 Number fields have their own controls:

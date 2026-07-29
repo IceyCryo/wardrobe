@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, GizmoHelper, GizmoViewport, Grid, OrbitControls } from "@react-three/drei";
+import { Vector3 } from "three";
 
 const MM = 0.25;
 const SNAP = 32;
@@ -190,6 +191,88 @@ function CameraRig({ view, shape, preset }) {
   return null;
 }
 
+function CameraKeyboardControls({ enabled }) {
+  const {camera,controls}=useThree();
+  const keys=useRef(new Set());
+  const lastPress=useRef({w:0,s:0});
+  const verticalMove=useRef(null);
+  const forward=useMemo(()=>new Vector3(),[]);
+  const right=useMemo(()=>new Vector3(),[]);
+  const movement=useMemo(()=>new Vector3(),[]);
+  const lookDirection=useMemo(()=>new Vector3(),[]);
+  const worldUp=useMemo(()=>new Vector3(0,1,0),[]);
+
+  useEffect(()=>{
+    const down=e=>{
+      if(["INPUT","SELECT","TEXTAREA"].includes(document.activeElement?.tagName))return;
+      const key=e.key.toLowerCase();
+      if(["w","a","s","d","shift"].includes(key)){
+        if(!e.repeat&&(key==="w"||key==="s")&&!e.shiftKey){
+          const now=performance.now();
+          verticalMove.current=now-lastPress.current[key]<320?key:null;
+          lastPress.current[key]=now;
+        }
+        keys.current.add(key);
+        if(["w","a","s","d"].includes(key))e.preventDefault();
+      }
+    };
+    const up=e=>{
+      const key=e.key.toLowerCase();
+      keys.current.delete(key);
+      if(verticalMove.current===key)verticalMove.current=null;
+    };
+    const clear=()=>{keys.current.clear();verticalMove.current=null};
+    window.addEventListener("keydown",down);
+    window.addEventListener("keyup",up);
+    window.addEventListener("blur",clear);
+    return()=>{
+      window.removeEventListener("keydown",down);
+      window.removeEventListener("keyup",up);
+      window.removeEventListener("blur",clear);
+    };
+  },[]);
+
+  useFrame((_,delta)=>{
+    if(!enabled||!controls)return;
+    const looking=keys.current.has("shift");
+    if(looking&&["w","a","s","d"].some(key=>keys.current.has(key))){
+      lookDirection.copy(controls.target).sub(camera.position);
+      const distance=lookDirection.length();
+      if(distance<.001)return;
+      right.set(1,0,0).applyQuaternion(camera.quaternion).normalize();
+      const angle=1.15*delta;
+      if(keys.current.has("a"))lookDirection.applyAxisAngle(worldUp,angle);
+      if(keys.current.has("d"))lookDirection.applyAxisAngle(worldUp,-angle);
+      if(keys.current.has("w"))lookDirection.applyAxisAngle(right,angle);
+      if(keys.current.has("s"))lookDirection.applyAxisAngle(right,-angle);
+      lookDirection.setLength(distance);
+      controls.target.copy(camera.position).add(lookDirection);
+      controls.update();
+      return;
+    }
+    movement.set(0,0,0);
+    if(verticalMove.current==="w"&&keys.current.has("w"))movement.add(worldUp);
+    else if(verticalMove.current==="s"&&keys.current.has("s"))movement.sub(worldUp);
+    else {
+    camera.getWorldDirection(forward);
+    forward.y=0;
+    if(forward.lengthSq()<.0001)return;
+    forward.normalize();
+    right.copy(forward).cross(camera.up).normalize();
+    if(keys.current.has("w"))movement.add(forward);
+    if(keys.current.has("s"))movement.sub(forward);
+    if(keys.current.has("d"))movement.add(right);
+    if(keys.current.has("a"))movement.sub(right);
+    }
+    if(!movement.lengthSq())return;
+    movement.normalize().multiplyScalar(1.5*delta);
+    camera.position.add(movement);
+    controls.target.add(movement);
+    controls.update();
+  });
+  return null;
+}
+
 function Panel({ position, size, color = "#66717b", onClick }) {
   return <mesh position={position} castShadow receiveShadow onClick={onClick}>
     <boxGeometry args={size}/>
@@ -287,9 +370,13 @@ function Fitting3D({ item, sectionWidth, height, depth, xCenter, selected, onSel
   }
   if (item.type === "led") return <mesh position={[x,y,d/2-.005]} onClick={click}><boxGeometry args={[.018,h,.018]}/><meshStandardMaterial color={item.color||"#fff3ba"} emissive={item.color||"#ffd66e"} emissiveIntensity={selected?4:2}/></mesh>;
   if(item.type==="shelf") return <group onClick={click}>
-    <Panel position={[x,y,0]} size={[w,h,d]} color={selected?"#5d91c8":itemColor}/>
-    <Panel position={[x,y-h/2-.009,d/2-.018]} size={[w+.018,h+.018,.04]} color={selected?"#477db7":"#68727a"}/>
-    <Panel position={[x,y+h/2+.006,0]} size={[w-.018,.012,d-.02]} color="#b8bec3"/>
+    <Panel position={[x,y,0]} size={[w,h,d]} color={itemColor}/>
+    <Panel position={[x,y-h/2-.009,d/2-.018]} size={[w+.018,h+.018,.04]} color={itemColor}/>
+    <Panel position={[x,y+h/2+.006,0]} size={[w-.018,.012,d-.02]} color={itemColor}/>
+    {selected&&<mesh position={[x,y,0]}>
+      <boxGeometry args={[w+.025,h+.035,d+.025]}/>
+      <meshBasicMaterial color="#4b9cff" wireframe transparent opacity={.95}/>
+    </mesh>}
     {[-1,1].map(side=><group key={side}>
       <mesh position={[x+side*(w/2-.035),y-h/2-.026,d*.32]} rotation={[Math.PI/2,0,0]}><cylinderGeometry args={[.011,.011,.028,16]}/><meshStandardMaterial color="#c0c6ca" metalness={.8} roughness={.2}/></mesh>
       <mesh position={[x+side*(w/2-.035),y-h/2-.026,-d*.32]} rotation={[Math.PI/2,0,0]}><cylinderGeometry args={[.011,.011,.028,16]}/><meshStandardMaterial color="#c0c6ca" metalness={.8} roughness={.2}/></mesh>
@@ -377,6 +464,7 @@ function WardrobeScene({ shape, runs, dimensions, runColors, selection, setSelec
     <Grid position={[0,-.02,1]} args={[18,18]} cellSize={.25} cellThickness={.45} cellColor="#34404a" sectionSize={1} sectionThickness={1} sectionColor="#53616d" fadeDistance={14} fadeStrength={1}/>
     <ContactShadows position={[0,0,1]} opacity={.5} scale={12} blur={2.4} far={6}/>
     <OrbitControls makeDefault target={[0,1.15,.55]} minDistance={2.2} maxDistance={20} minPolarAngle={.04} maxPolarAngle={Math.PI-.04} enableRotate={view==="3d"} enablePan enableZoom zoomToCursor screenSpacePanning enableDamping dampingFactor={.075} rotateSpeed={.72} panSpeed={.85} zoomSpeed={.8}/>
+    <CameraKeyboardControls enabled={view==="3d"}/>
     <CameraRig view={view} shape={shape} preset={cameraPreset}/>
     <GizmoHelper alignment="bottom-right" margin={[75,65]}><GizmoViewport axisColors={["#ef6d6d","#62c77a","#5799ff"]} labelColor="#fff"/></GizmoHelper>
   </Canvas>;
@@ -399,7 +487,9 @@ export default function App() {
   const [visibility, setVisibility] = useState({center:true,left:true,right:true});
   const [cameraPreset, setCameraPreset] = useState({name:"home",revision:0});
   const [toast, setToast] = useState("");
+  const [historyRevision, setHistoryRevision] = useState(0);
   const drag = useRef(null);
+  const history = useRef({past:[],future:[]});
   const id = useRef(40);
 
   const visibleRuns = useMemo(() => shape === "straight" ? ["center"] : shape === "left" ? ["left","center"] : shape === "right" ? ["center","right"] : ["left","center","right"], [shape]);
@@ -411,24 +501,81 @@ export default function App() {
   const runDimensions = {center:{height,depth},left:sideDimensions.left,right:sideDimensions.right};
   const pxScale = Math.min(0.235, 570 / Math.max(centerWidth, 1));
 
+  const designSnapshot = () => ({
+    shape,
+    runs: structuredClone(runs),
+    selection: selection ? {...selection} : null,
+    height,
+    depth,
+    sideDimensions: structuredClone(sideDimensions),
+    runColors: {...runColors},
+  });
+  const restoreSnapshot = snapshot => {
+    setShape(snapshot.shape);
+    setRuns(snapshot.runs);
+    setSelection(snapshot.selection);
+    setHeight(snapshot.height);
+    setDepth(snapshot.depth);
+    setSideDimensions(snapshot.sideDimensions);
+    setRunColors(snapshot.runColors);
+  };
+  const captureHistory = () => {
+    history.current.past.push(designSnapshot());
+    if(history.current.past.length>80) history.current.past.shift();
+    history.current.future=[];
+    setHistoryRevision(value=>value+1);
+  };
+  const undo = () => {
+    const previous=history.current.past.pop();
+    if(!previous)return;
+    history.current.future.push(designSnapshot());
+    restoreSnapshot(previous);
+    setHistoryRevision(value=>value+1);
+  };
+  const redo = () => {
+    const next=history.current.future.pop();
+    if(!next)return;
+    history.current.past.push(designSnapshot());
+    restoreSnapshot(next);
+    setHistoryRevision(value=>value+1);
+  };
   const commitRuns = (run, next) => setRuns(prev => ({...prev, [run]: next}));
-  const patchSection = (patch) => commitRuns(selection.run, runs[selection.run].map(s => s.id === selection.sectionId ? {...s,...patch} : s));
-  const patchItem = (patch) => commitRuns(selection.run, runs[selection.run].map(s => s.id === selection.sectionId ? {...s,items:s.items.map(i=>i.id===selection.itemId?{...i,...patch}:i)} : s));
+  const patchSection = (patch) => {
+    captureHistory();
+    commitRuns(selection.run, runs[selection.run].map(s => s.id === selection.sectionId ? {...s,...patch} : s));
+  };
+  const patchItem = (patch) => {
+    captureHistory();
+    commitRuns(selection.run, runs[selection.run].map(s => s.id === selection.sectionId ? {...s,items:s.items.map(i=>i.id===selection.itemId?{...i,...patch}:i)} : s));
+  };
   const setRunDimension = (run, key, value) => {
+    captureHistory();
     if (run === "center") {
       if (key === "height") setHeight(value);
       if (key === "depth") setDepth(value);
     } else setSideDimensions(previous => ({...previous,[run]:{...previous[run],[key]:value}}));
   };
   const setRunLength = (run, value) => {
+    captureHistory();
     const sections=runs[run], current=sections.reduce((sum,section)=>sum+section.width,0);
     const ratio=Math.max(500,value)/current;
     commitRuns(run,sections.map(section=>({...section,width:Math.max(320,Math.round(section.width*ratio))})));
   };
   const flash = message => { setToast(message); setTimeout(()=>setToast(""),1800); };
   const setCamera = name => setCameraPreset(previous=>({name,revision:previous.revision+1}));
+  const changeShape = nextShape => {
+    if(nextShape===shape)return;
+    captureHistory();
+    setShape(nextShape);
+  };
+  const setRunColor = (run,color) => {
+    if(runColors[run]===color)return;
+    captureHistory();
+    setRunColors(previous=>({...previous,[run]:color}));
+  };
 
   function addSection() {
+    captureHistory();
     const run = selection?.run || "center";
     const nextId = `s${++id.current}`;
     const selectedIndex = runs[run].findIndex(s => s.id === selection?.sectionId);
@@ -444,12 +591,14 @@ export default function App() {
     const from = next.findIndex(section => section.id === sectionId);
     const to = from + direction;
     if (from < 0 || to < 0 || to >= next.length) return;
+    captureHistory();
     [next[from], next[to]] = [next[to], next[from]];
     commitRuns(run, next);
   }
 
   function moveItemToSection(targetSectionId) {
     if (!currentItem || targetSectionId === currentSection.id) return;
+    captureHistory();
     const runSections = runs[selection.run];
     const target = runSections.find(section => section.id === targetSectionId);
     const moved = {...currentItem, x:20, width:Math.min(currentItem.width,target.width-40)};
@@ -497,6 +646,7 @@ export default function App() {
       patchSection({items:currentSection.items.filter(i=>i.id!==selection.itemId)});
       setSelection({type:"section",run:selection.run,sectionId:selection.sectionId});
     } else if (selection.type === "section" && runs[selection.run].length > 1) {
+      captureHistory();
       commitRuns(selection.run,runs[selection.run].filter(s=>s.id!==selection.sectionId));
       setSelection({type:"section",run:selection.run,sectionId:runs[selection.run].find(s=>s.id!==selection.sectionId).id});
     }
@@ -512,6 +662,11 @@ export default function App() {
   useEffect(() => {
     const shortcuts = e => {
       if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if(e.shiftKey)redo();else undo();
+        return;
+      }
       if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
         removeSelection();
@@ -536,16 +691,19 @@ export default function App() {
   function startItemDrag(e,run,section,item) {
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
+    captureHistory();
     drag.current={kind:"item",startX:e.clientX,startY:e.clientY,startItemX:item.x??20,startItemY:item.y,itemId:item.id,itemWidth:item.width,itemHeight:item.h,sectionWidth:section.width,sectionId:section.id,run};
   }
 
   function startDividerDrag(e, run, index, projection = 1) {
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
+    captureHistory();
     drag.current={kind:"divider",startX:e.clientX,run,index,left:runs[run][index].width,right:runs[run][index+1].width,projection};
   }
 
   function startEnvelopeResize(edge, pointerEvent) {
+    captureHistory();
     const run="center";
     const viewportHeight=document.querySelector(".cad-viewport")?.clientHeight || 700;
     const cameraDistance=8.5;
@@ -604,6 +762,10 @@ export default function App() {
   return <main className="cad-app">
     <header className="cad-top">
       <div className="file-title"><b>Wardrobe 01 <i>•</i> Saved</b></div>
+      <div className="history">
+        <button onClick={undo} disabled={!history.current.past.length} title="Undo (Command + Z)"><I name="undo" size={17}/></button>
+        <button onClick={redo} disabled={!history.current.future.length} title="Redo (Command + Shift + Z)"><I name="redo" size={17}/></button>
+      </div>
       <div className="header-views">{[["3d","cube","3D"],["front","front","Front"],["plan","plan","Plan"]].map(([key,icon,label])=><button key={key} className={view===key?"active":""} onClick={()=>{setView(key);setCamera("home")}}><I name={icon} size={16}/>{label}</button>)}</div>
       <div className="run-visibility"><span>Visibility</span>{["left","center","right"].map(run=><button key={run} className={visibility[run]?"visible":""} disabled={(run==="left"&&shape!=="left"&&shape!=="u")||(run==="right"&&shape!=="right"&&shape!=="u")} onClick={()=>setVisibility(previous=>({...previous,[run]:!previous[run]}))}><I name="eye" size={14}/>{run[0].toUpperCase()}</button>)}</div>
       <div className="top-actions"><button className="primary" onClick={exportPdf}><I name="export"/> Export drawing</button></div>
@@ -614,7 +776,7 @@ export default function App() {
       <section className="layout-section">
         <label>WARDROBE FOOTPRINT</label>
         <div className="shape-options">
-          {[["straight","I"],["left","L"],["right","⅃"],["u","U"]].map(([key,g])=><button key={key} className={shape===key?"active":""} onClick={()=>setShape(key)}><b>{g}</b><span>{key==="straight"?"Straight":key==="u"?"U shape":key==="left"?"L left":"L right"}</span></button>)}
+          {[["straight","I"],["left","L"],["right","⅃"],["u","U"]].map(([key,g])=><button key={key} className={shape===key?"active":""} onClick={()=>changeShape(key)}><b>{g}</b><span>{key==="straight"?"Straight":key==="u"?"U shape":key==="left"?"L left":"L right"}</span></button>)}
         </div>
       </section>
       <section>
@@ -645,7 +807,7 @@ export default function App() {
           <button onClick={()=>{setView("3d");setCamera("left")}} title="Left isometric">↙ Left</button>
           <button onClick={()=>{setView("3d");setCamera("right")}} title="Right isometric">Right ↘</button>
         </div>
-        <div className="viewport-help">{view==="front" ? <><b>RESIZE</b> drag the blue center-run edges or corners · <b>PAN</b> right drag · <b>ZOOM</b> wheel</> : <><b>ORBIT</b> left drag · <b>PAN</b> right drag · <b>ZOOM</b> wheel · <b>CLICK</b> any section or fitting to edit</>}</div>
+        <div className="viewport-help">{view==="front" ? <><b>RESIZE</b> drag the blue center-run edges or corners · <b>PAN</b> right drag · <b>ZOOM</b> wheel</> : <><b>MOVE</b> WASD · <b>UP/DOWN</b> double-tap W/S · <b>LOOK</b> Shift + WASD · <b>ORBIT</b> drag</>}</div>
       </div>
     </section>
 
@@ -706,7 +868,7 @@ export default function App() {
         <button className="split-button" onClick={addSection}><I name="plus" size={15}/> Add section to {selection.run} run</button>
         <button className="delete-section" onClick={removeSelection} disabled={runs[selection.run].length===1}><I name="trash" size={14}/> Remove this section</button>
       </> : null}
-      <section className="global-dims"><label>{(selection?.run||"center").toUpperCase()} RUN ENVELOPE</label><div className="field-grid"><NumberField label="Run length" value={runs[selection?.run||"center"].reduce((sum,section)=>sum+section.width,0)} min={500} onChange={v=>setRunLength(selection?.run||"center",v)}/><NumberField label="Run height" value={activeHeight} min={1200} onChange={v=>setRunDimension(selection?.run||"center","height",v)}/><NumberField label="Run depth" value={activeDepth} min={300} onChange={v=>setRunDimension(selection?.run||"center","depth",v)}/></div><ColorChoices label="Wardrobe color" value={runColors[selection?.run||"center"]} onChange={color=>setRunColors(previous=>({...previous,[selection?.run||"center"]:color}))}/><p className="run-note">Dimensions and color apply only to this run.</p></section>
+      <section className="global-dims"><label>{(selection?.run||"center").toUpperCase()} RUN ENVELOPE</label><div className="field-grid"><NumberField label="Run length" value={runs[selection?.run||"center"].reduce((sum,section)=>sum+section.width,0)} min={500} onChange={v=>setRunLength(selection?.run||"center",v)}/><NumberField label="Run height" value={activeHeight} min={1200} onChange={v=>setRunDimension(selection?.run||"center","height",v)}/><NumberField label="Run depth" value={activeDepth} min={300} onChange={v=>setRunDimension(selection?.run||"center","depth",v)}/></div><ColorChoices label="Wardrobe color" value={runColors[selection?.run||"center"]} onChange={color=>setRunColor(selection?.run||"center",color)}/><p className="run-note">Dimensions and color apply only to this run.</p></section>
     </aside>
 
     {toast&&<div className="toast">{toast}</div>}
