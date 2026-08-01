@@ -14,6 +14,7 @@ const colorChoices = [
   {name:"Walnut",value:"#76533f"},
   {name:"Sage",value:"#738877"},
   {name:"Navy",value:"#536b84"},
+  {name:"Cashmere",value:"#c8bca9"},
 ];
 const catalog = [
   { type: "shelf", name: "Shelf", meta: "18 mm panel", glyph: "═" },
@@ -24,6 +25,7 @@ const catalog = [
   { type: "shoe", name: "Shoe shelf", meta: "Angled 12°", glyph: "≋" },
   { type: "mirror", name: "Mirror", meta: "4 selectable shapes", glyph: "◇" },
   { type: "led", name: "LED profile", meta: "Vertical / horizontal", glyph: "│" },
+  { type: "divider", name: "Vertical divider", meta: "Custom panel", glyph: "┃" },
 ];
 
 const seedSections = [
@@ -128,6 +130,20 @@ function ColorChoices({ value, onChange, label }) {
   </div></div>;
 }
 
+function cubbyBreaks(item, axis) {
+  const count=axis==="row"?(item.rows||2):(item.columns||2);
+  const total=axis==="row"?item.h:item.width;
+  const saved=axis==="row"?item.rowBreaks:item.columnBreaks;
+  if(Array.isArray(saved)&&saved.length===count-1)return saved.map(value=>Math.max(1,Math.min(total-1,value))).sort((a,b)=>a-b);
+  return Array.from({length:count-1},(_,index)=>total*(index+1)/count);
+}
+
+function cubbyTracks(item, axis) {
+  const total=axis==="row"?item.h:item.width;
+  const points=[0,...cubbyBreaks(item,axis),total];
+  return points.slice(1).map((point,index)=>Math.max(1,point-points[index]));
+}
+
 function Fitting({ item, selected, scale, xScale = scale, onSelect, onPointerDown }) {
   const common = {
     className: `fitting fit-${item.type} ${selected ? "selected" : ""}`,
@@ -143,9 +159,10 @@ function Fitting({ item, selected, scale, xScale = scale, onSelect, onPointerDow
   if (item.type === "rail") return <div {...common}><span className="rail-tube"/>{[.23,.5,.76].map((x,n)=><i className="hanger" key={x} style={{left:`${x*100}%`}}><b style={{background:["#71849a","#9a7567","#7a8a73"][n]}}/></i>)}</div>;
   if (item.type === "drawer") return <div {...common}><div className="drawer-stack">{Array.from({length:item.drawers || 3}).map((_,i)=><i key={i}><b/></i>)}</div></div>;
   if (item.type === "basket") return <div {...common}><span className="basket-mesh"/></div>;
-  if (item.type === "cubby") return <div {...common}><span className="cubby-grid" style={{gridTemplateColumns:`repeat(${item.columns || 2},1fr)`}}>{Array.from({length:(item.rows||2)*(item.columns||2)}).map((_,i)=><i key={i}/>)}</span></div>;
+  if (item.type === "cubby") return <div {...common}><span className="cubby-grid" style={{gridTemplateColumns:cubbyTracks(item,"column").map(value=>`${value}fr`).join(" "),gridTemplateRows:cubbyTracks(item,"row").map(value=>`${value}fr`).join(" "),columnGap:`${Math.max(1,(item.columnGap??20)*scale)}px`,rowGap:`${Math.max(1,(item.rowGap??20)*scale)}px`,padding:`${Math.max(1,(item.frameThickness??25)*scale)}px`}}>{Array.from({length:(item.rows||2)*(item.columns||2)}).map((_,i)=><i key={i}/>)}</span></div>;
   if (item.type === "shoe") return <div {...common}><span className="shoe-set">{Array.from({length:item.rows || 3}).map((_,i)=><i key={i}/>)}</span></div>;
   if (item.type === "mirror") return <div {...common}><span className="mirror-pane"/></div>;
+  if (item.type === "divider") return <div {...common}><span className="vertical-divider"/></div>;
   return <div {...common}><span className="led-line"/></div>;
 }
 
@@ -287,6 +304,21 @@ function WireBar({ position, size, selected, color }) {
   </mesh>;
 }
 
+function HangingGarment({ x, y, color, selected, long = false }) {
+  return <group position={[x,y,0]}>
+    <mesh position={[0,-.055,.08]} rotation={[0,0,Math.PI/2]}><torusGeometry args={[.026,.005,8,18,Math.PI*1.55]}/><meshStandardMaterial color="#b8c0c6" metalness={.8}/></mesh>
+    <WireBar position={[0,-.115,.08]} size={[.008,.11,.008]} selected={selected}/>
+    <mesh position={[0,-.175,.08]} rotation={[0,0,Math.PI/4]}><boxGeometry args={[.008,.2,.008]}/><meshStandardMaterial color="#aeb6bc" metalness={.75}/></mesh>
+    <mesh position={[0,-.175,.08]} rotation={[0,0,-Math.PI/4]}><boxGeometry args={[.008,.2,.008]}/><meshStandardMaterial color="#aeb6bc" metalness={.75}/></mesh>
+    <group position={[0,long?-.41:-.33,.075]}>
+      <mesh castShadow><boxGeometry args={[long?.18:.22,long?.48:.3,.075]}/><meshStandardMaterial color={color} roughness={.9}/></mesh>
+      <mesh position={[-.135,long?.15:.07,0]} rotation={[0,0,-.3]} castShadow><boxGeometry args={[.09,long?.28:.2,.065]}/><meshStandardMaterial color={color} roughness={.9}/></mesh>
+      <mesh position={[.135,long?.15:.07,0]} rotation={[0,0,.3]} castShadow><boxGeometry args={[.09,long?.28:.2,.065]}/><meshStandardMaterial color={color} roughness={.9}/></mesh>
+      <mesh position={[0,long?.235:.145,.041]}><torusGeometry args={[.035,.012,8,20,Math.PI]}/><meshStandardMaterial color="#252a2e" roughness={1}/></mesh>
+    </group>
+  </group>;
+}
+
 function Fitting3D({ item, sectionWidth, height, depth, xCenter, selected, onSelect }) {
   const w = Math.min(item.width, sectionWidth - 36) / 1000;
   const h = Math.max(item.h, item.type === "shelf" ? 18 : 35) / 1000;
@@ -304,13 +336,7 @@ function Fitting3D({ item, sectionWidth, height, depth, xCenter, selected, onSel
       <mesh position={[x+side*w/2,y,.08]} rotation={[0,0,Math.PI/2]} castShadow><cylinderGeometry args={[.032,.032,.028,24]}/><meshStandardMaterial color="#8e989f" metalness={.85} roughness={.18}/></mesh>
       <Panel position={[x+side*w/2,y,.012]} size={[.075,.075,.025]} color={selected?"#477db7":"#707981"}/>
     </group>)}
-    {[.22,.5,.78].map((v,i)=>{const hx=x-w/2+w*v;return <group key={v}>
-      <mesh position={[hx,y-.045,.08]} rotation={[0,0,Math.PI/2]}><torusGeometry args={[.026,.005,8,18,Math.PI*1.55]}/><meshStandardMaterial color="#adb5bb" metalness={.8} roughness={.2}/></mesh>
-      <WireBar position={[hx,y-.105,.08]} size={[.008,.11,.008]} selected={selected}/>
-      <mesh position={[hx,y-.165,.08]} rotation={[0,0,Math.PI/4]}><boxGeometry args={[.008,.2,.008]}/><meshStandardMaterial color="#aeb6bc" metalness={.75}/></mesh>
-      <mesh position={[hx,y-.165,.08]} rotation={[0,0,-Math.PI/4]}><boxGeometry args={[.008,.2,.008]}/><meshStandardMaterial color="#aeb6bc" metalness={.75}/></mesh>
-      <mesh position={[hx,y-.32,.065]} castShadow><boxGeometry args={[.2,.31,.07]}/><meshStandardMaterial color={["#70879a","#9d7364","#788b75"][i]} roughness={.82}/></mesh>
-    </group>})}
+    {[.22,.5,.78].map((v,i)=><HangingGarment key={v} x={x-w/2+w*v} y={y} color={["#70879a","#9d7364","#788b75"][i]} selected={selected} long={i===1}/>) }
   </group>;
   if (item.type === "drawer") return <group onClick={click}>{Array.from({length:item.drawers||3}).map((_,i)=>{
     const each=item.h/1000/(item.drawers||3); return <group key={i}>
@@ -320,9 +346,14 @@ function Fitting3D({ item, sectionWidth, height, depth, xCenter, selected, onSel
   })}</group>;
   if (item.type === "cubby") {
     const rows=item.rows||2, cols=item.columns||2;
+    const columnThickness=Math.min(.2,Math.max(.005,(item.columnGap??20)/1000));
+    const rowThickness=Math.min(.2,Math.max(.005,(item.rowGap??20)/1000));
+    const frameThickness=Math.min(.2,(item.frameThickness||25)/1000);
+    const inset=Math.min(d-.05,(item.depthInset||0)/1000),cubbyDepth=Math.max(.05,d-inset);
+    const columnBreaks=cubbyBreaks(item,"column"),rowBreaks=cubbyBreaks(item,"row");
     return <group onClick={click}>
-      {Array.from({length:cols+1}).map((_,i)=><Panel key={`c${i}`} position={[x-w/2+w*i/cols,y,0]} size={[.025,h,d]} color={edge}/>)}
-      {Array.from({length:rows+1}).map((_,i)=><Panel key={`r${i}`} position={[x,y-h/2+h*i/rows,0]} size={[w,.025,d]} color={edge}/>)}
+      {[0,...columnBreaks,item.width].map((position,i)=><Panel key={`c${i}`} position={[x-w/2+position/1000,y,-inset/2]} size={[i===0||i===cols?frameThickness:columnThickness,h,cubbyDepth]} color={edge}/>)}
+      {[0,...rowBreaks,item.h].map((position,i)=><Panel key={`r${i}`} position={[x,y+h/2-position/1000,-inset/2]} size={[w,i===0||i===rows?frameThickness:rowThickness,cubbyDepth]} color={edge}/>)}
     </group>;
   }
   if (item.type === "basket") {
@@ -369,6 +400,7 @@ function Fitting3D({ item, sectionWidth, height, depth, xCenter, selected, onSel
     </group>;
   }
   if (item.type === "led") return <mesh position={[x,y,d/2-.005]} onClick={click}><boxGeometry args={[.018,h,.018]}/><meshStandardMaterial color={item.color||"#fff3ba"} emissive={item.color||"#ffd66e"} emissiveIntensity={selected?4:2}/></mesh>;
+  if (item.type === "divider") return <group onClick={click}><Panel position={[x,y,0]} size={[w,h,d]} color={edge}/>{selected&&<mesh position={[x,y,d/2+.004]}><boxGeometry args={[w+.018,h+.018,.008]}/><meshBasicMaterial color="#4b9cff" wireframe/></mesh>}</group>;
   if(item.type==="shelf") return <group onClick={click}>
     <Panel position={[x,y,0]} size={[w,h,d]} color={itemColor}/>
     <Panel position={[x,y-h/2-.009,d/2-.018]} size={[w+.018,h+.018,.04]} color={itemColor}/>
@@ -385,13 +417,13 @@ function Fitting3D({ item, sectionWidth, height, depth, xCenter, selected, onSel
   return <Panel position={[x,y,0]} size={[w,h,d]} color={edge} onClick={click}/>;
 }
 
-function CabinetRun3D({ run, sections, height, depth, color, position, rotation = [0,0,0], selection, onSelectSection, onSelectItem }) {
+function CabinetRun3D({ run, sections, height, depth, color, position, rotation = [0,0,0], selection, onSelectSection, onSelectItem, theme }) {
   const total = sections.reduce((sum,s)=>sum+s.width,0);
   const W=total/1000,H=height/1000,D=depth/1000,T=.036;
   let cursor=-total/2;
   const sectionData=sections.map(section=>{const center=cursor+section.width/2;cursor+=section.width;return {section,center}});
   return <group position={position} rotation={rotation}>
-    <Panel position={[0,H/2,-D/2]} size={[W,H,.025]} color="#303942"/>
+    <Panel position={[0,H/2,-D/2]} size={[W,H,.025]} color={theme==="light"?"#d8dde1":"#596570"}/>
     <Panel position={[0,H-T/2,0]} size={[W+T,T,D]} color={color}/>
     <Panel position={[0,T/2,0]} size={[W+T,T,D]} color={color}/>
     <Panel position={[-W/2,T+H/2-T,0]} size={[T,H-T*2,D]} color={color}/>
@@ -435,7 +467,7 @@ function RunResizeHandles({ width, height, depth, position, rotation = [0,0,0], 
   </group>;
 }
 
-function WardrobeScene({ shape, runs, dimensions, runColors, selection, setSelection, view, visibility, cameraPreset, onStartEnvelopeResize }) {
+function WardrobeScene({ shape, runs, dimensions, runColors, selection, setSelection, view, visibility, cameraPreset, onStartEnvelopeResize, theme }) {
   const centerWidth=runs.center.reduce((a,s)=>a+s.width,0)/1000;
   const leftWidth=runs.left.reduce((a,s)=>a+s.width,0)/1000;
   const rightWidth=runs.right.reduce((a,s)=>a+s.width,0)/1000;
@@ -443,22 +475,23 @@ function WardrobeScene({ shape, runs, dimensions, runColors, selection, setSelec
   const sideGap=.075;
   const selectSection=(run,sectionId)=>setSelection({type:"section",run,sectionId});
   const selectItem=(run,sectionId,itemId)=>setSelection({type:"item",run,sectionId,itemId});
-  return <Canvas shadows dpr={[1,1.7]} gl={{antialias:true}} camera={{position:[.8,3.25,7.4],fov:38,near:.1,far:100}}>
-    <color attach="background" args={["#171b20"]}/>
-    <fog attach="fog" args={["#171b20",10,22]}/>
+  const sceneBackground=theme==="light"?"#e5e8eb":"#171b20";
+  return <Canvas onPointerMissed={()=>setSelection(null)} shadows dpr={[1,1.7]} gl={{antialias:true}} camera={{position:[.8,3.25,7.4],fov:38,near:.1,far:100}}>
+    <color attach="background" args={[sceneBackground]}/>
+    <fog attach="fog" args={[sceneBackground,10,22]}/>
     <ambientLight intensity={1.2}/>
     <directionalLight position={[4,8,5]} intensity={3.2} castShadow shadow-mapSize={[2048,2048]}/>
     <directionalLight position={[-5,3,2]} intensity={1.1} color="#8ab5ff"/>
     <group position={[0,0,0]}>
-      {visibility.center&&<CabinetRun3D run="center" sections={runs.center} height={center.height} depth={center.depth} color={runColors.center} position={[0,0,0]} selection={selection} onSelectSection={selectSection} onSelectItem={selectItem}/>}
+      {visibility.center&&<CabinetRun3D run="center" sections={runs.center} height={center.height} depth={center.depth} color={runColors.center} position={[0,0,0]} selection={selection} onSelectSection={selectSection} onSelectItem={selectItem} theme={theme}/>} 
       {view==="front"&&visibility.center&&<RunResizeHandles width={centerWidth*1000} height={center.height} depth={center.depth} position={[0,0,0]} onStart={onStartEnvelopeResize}/>}
       {visibility.left&&(shape==="left"||shape==="u")&&<>
         <CornerBox3D side="left" centerWidth={centerWidth} centerDepth={center.depth/1000} sideHeight={left.height/1000} sideDepth={left.depth/1000} color={runColors.left}/>
-        <CabinetRun3D run="left" sections={runs.left} height={left.height} depth={left.depth} color={runColors.left} position={[-centerWidth/2-left.depth/2000-sideGap,0,leftWidth/2+center.depth/2000+.015]} rotation={[0,Math.PI/2,0]} selection={selection} onSelectSection={selectSection} onSelectItem={selectItem}/>
+        <CabinetRun3D run="left" sections={runs.left} height={left.height} depth={left.depth} color={runColors.left} position={[-centerWidth/2-left.depth/2000-sideGap,0,leftWidth/2+center.depth/2000+.015]} rotation={[0,Math.PI/2,0]} selection={selection} onSelectSection={selectSection} onSelectItem={selectItem} theme={theme}/>
       </>}
       {visibility.right&&(shape==="right"||shape==="u")&&<>
         <CornerBox3D side="right" centerWidth={centerWidth} centerDepth={center.depth/1000} sideHeight={right.height/1000} sideDepth={right.depth/1000} color={runColors.right}/>
-        <CabinetRun3D run="right" sections={runs.right} height={right.height} depth={right.depth} color={runColors.right} position={[centerWidth/2+right.depth/2000+sideGap,0,rightWidth/2+center.depth/2000+.015]} rotation={[0,-Math.PI/2,0]} selection={selection} onSelectSection={selectSection} onSelectItem={selectItem}/>
+        <CabinetRun3D run="right" sections={runs.right} height={right.height} depth={right.depth} color={runColors.right} position={[centerWidth/2+right.depth/2000+sideGap,0,rightWidth/2+center.depth/2000+.015]} rotation={[0,-Math.PI/2,0]} selection={selection} onSelectSection={selectSection} onSelectItem={selectItem} theme={theme}/>
       </>}
     </group>
     <Grid position={[0,-.02,1]} args={[18,18]} cellSize={.25} cellThickness={.45} cellColor="#34404a" sectionSize={1} sectionThickness={1} sectionColor="#53616d" fadeDistance={14} fadeStrength={1}/>
@@ -488,7 +521,10 @@ export default function App() {
   const [cameraPreset, setCameraPreset] = useState({name:"home",revision:0});
   const [toast, setToast] = useState("");
   const [historyRevision, setHistoryRevision] = useState(0);
+  const [theme, setTheme] = useState("dark");
   const drag = useRef(null);
+  const importInput = useRef(null);
+  const hydrated = useRef(false);
   const history = useRef({past:[],future:[]});
   const id = useRef(40);
 
@@ -509,15 +545,17 @@ export default function App() {
     depth,
     sideDimensions: structuredClone(sideDimensions),
     runColors: {...runColors},
+    theme,
   });
   const restoreSnapshot = snapshot => {
-    setShape(snapshot.shape);
+    setShape(snapshot.shape||"straight");
     setRuns(snapshot.runs);
-    setSelection(snapshot.selection);
-    setHeight(snapshot.height);
-    setDepth(snapshot.depth);
-    setSideDimensions(snapshot.sideDimensions);
-    setRunColors(snapshot.runColors);
+    setSelection(snapshot.selection||null);
+    setHeight(snapshot.height||2400);
+    setDepth(snapshot.depth||600);
+    setSideDimensions(snapshot.sideDimensions||{left:{height:2300,depth:560},right:{height:2300,depth:560}});
+    setRunColors(snapshot.runColors||{center:"#69737d",left:"#738877",right:"#536b84"});
+    setTheme(snapshot.theme||"dark");
   };
   const captureHistory = () => {
     history.current.past.push(designSnapshot());
@@ -546,7 +584,15 @@ export default function App() {
   };
   const patchItem = (patch) => {
     captureHistory();
-    commitRuns(selection.run, runs[selection.run].map(s => s.id === selection.sectionId ? {...s,items:s.items.map(i=>i.id===selection.itemId?{...i,...patch}:i)} : s));
+    commitRuns(selection.run, runs[selection.run].map(s => s.id === selection.sectionId ? {...s,items:s.items.map(i=>{
+      if(i.id!==selection.itemId)return i;
+      const next={...i,...patch};
+      if(i.type==="cubby"){
+        if(patch.h!==undefined&&patch.rowBreaks===undefined&&Array.isArray(i.rowBreaks))next.rowBreaks=i.rowBreaks.map(value=>value*patch.h/i.h);
+        if(patch.width!==undefined&&patch.columnBreaks===undefined&&Array.isArray(i.columnBreaks))next.columnBreaks=i.columnBreaks.map(value=>value*patch.width/i.width);
+      }
+      return next;
+    })} : s));
   };
   const setRunDimension = (run, key, value) => {
     captureHistory();
@@ -633,8 +679,9 @@ export default function App() {
     const defaults = {
       shelf:{h:18,width:currentSection.width-40}, rail:{h:40,width:currentSection.width-60},
       drawer:{h:480,width:currentSection.width-40,drawers:3}, basket:{h:300,width:currentSection.width-50},
-      cubby:{h:480,width:currentSection.width-40,rows:2,columns:2}, shoe:{h:450,width:currentSection.width-40,rows:3},
+      cubby:{h:480,width:currentSection.width-40,rows:2,columns:2,rowGap:20,columnGap:20,frameThickness:25,depthInset:0}, shoe:{h:450,width:currentSection.width-40,rows:3},
       mirror:{h:1200,width:Math.min(500,currentSection.width-60),variant:"rectangle"}, led:{h:1200,width:20},
+      divider:{h:1200,width:18,depth:activeDepth-40},
     };
     const item = {id:`i${++id.current}`,type,x:20,y:Math.min(1200,100+runs[selection.run].flatMap(s=>s.items).length*90),...defaults[type]};
     patchSection({items:[...currentSection.items,item]});
@@ -680,9 +727,7 @@ export default function App() {
         const amount = e.shiftKey ? SNAP * 4 : SNAP;
         nudgeItem(e.key==="ArrowLeft"?-amount:e.key==="ArrowRight"?amount:0,e.key==="ArrowUp"?-amount:e.key==="ArrowDown"?amount:0);
       }
-      if (e.key === "Escape" && selection?.type === "item") {
-        setSelection({type:"section",run:selection.run,sectionId:selection.sectionId});
-      }
+      if (e.key === "Escape") setSelection(null);
     };
     window.addEventListener("keydown", shortcuts);
     return () => window.removeEventListener("keydown", shortcuts);
@@ -757,9 +802,37 @@ export default function App() {
     return()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up)};
   },[height,sideDimensions,pxScale,snap]);
 
+  useEffect(()=>{
+    try {
+      const saved=localStorage.getItem("wardrobe-designer-autosave");
+      if(saved)restoreSnapshot(JSON.parse(saved).design||JSON.parse(saved));
+    } catch { /* Ignore an invalid recovery snapshot. */ }
+    hydrated.current=true;
+  },[]);
+
+  useEffect(()=>{
+    if(!hydrated.current)return;
+    try { localStorage.setItem("wardrobe-designer-autosave",JSON.stringify({version:1,savedAt:new Date().toISOString(),design:designSnapshot()})); }
+    catch { /* Project files remain available if browser storage is unavailable. */ }
+  },[shape,runs,height,depth,sideDimensions,runColors,theme]);
+
+  function exportProject(){
+    const payload={format:"atelier-wardrobe",version:1,savedAt:new Date().toISOString(),design:designSnapshot()};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}));
+    const link=document.createElement("a");link.href=url;link.download=`wardrobe-${new Date().toISOString().slice(0,10)}.wardrobe.json`;link.click();URL.revokeObjectURL(url);
+    flash("Project file saved");
+  }
+  async function importProject(event){
+    const file=event.target.files?.[0];event.target.value="";if(!file)return;
+    try {
+      const payload=JSON.parse(await file.text()),snapshot=payload.design||payload;
+      if(!snapshot.runs?.center||!Array.isArray(snapshot.runs.center))throw new Error("Invalid project");
+      captureHistory();restoreSnapshot(snapshot);flash(`Opened ${file.name}`);
+    } catch { flash("That is not a valid wardrobe project file"); }
+  }
   function exportPdf(){window.print()}
 
-  return <main className="cad-app">
+  return <main className="cad-app" data-theme={theme}>
     <header className="cad-top">
       <div className="file-title"><b>Wardrobe 01 <i>•</i> Saved</b></div>
       <div className="history">
@@ -768,7 +841,13 @@ export default function App() {
       </div>
       <div className="header-views">{[["3d","cube","3D"],["front","front","Front"],["plan","plan","Plan"]].map(([key,icon,label])=><button key={key} className={view===key?"active":""} onClick={()=>{setView(key);setCamera("home")}}><I name={icon} size={16}/>{label}</button>)}</div>
       <div className="run-visibility"><span>Visibility</span>{["left","center","right"].map(run=><button key={run} className={visibility[run]?"visible":""} disabled={(run==="left"&&shape!=="left"&&shape!=="u")||(run==="right"&&shape!=="right"&&shape!=="u")} onClick={()=>setVisibility(previous=>({...previous,[run]:!previous[run]}))}><I name="eye" size={14}/>{run[0].toUpperCase()}</button>)}</div>
-      <div className="top-actions"><button className="primary" onClick={exportPdf}><I name="export"/> Export drawing</button></div>
+      <div className="top-actions">
+        <button onClick={()=>setTheme(value=>value==="dark"?"light":"dark")} title="Toggle light and dark theme">{theme==="dark"?"☀":"☾"} {theme==="dark"?"Light":"Dark"}</button>
+        <button onClick={()=>importInput.current?.click()}>Open project</button>
+        <button onClick={exportProject}>Save project</button>
+        <button className="primary" onClick={exportPdf}><I name="export"/> Drawing</button>
+        <input ref={importInput} className="file-input" type="file" accept=".json,.wardrobe" onChange={importProject}/>
+      </div>
     </header>
 
     <aside className="build-panel">
@@ -801,7 +880,7 @@ export default function App() {
     <section className="viewport-shell">
       <div className={`cad-viewport view-${view}`}>
         <div className="viewport-label"><b>WARDROBE 01</b><span>{view.toUpperCase()} / ORTHOGRAPHIC</span></div>
-        <WardrobeScene shape={shape} runs={runs} dimensions={runDimensions} runColors={runColors} selection={selection} setSelection={setSelection} view={view} visibility={visibility} cameraPreset={cameraPreset} onStartEnvelopeResize={startEnvelopeResize}/>
+        <WardrobeScene shape={shape} runs={runs} dimensions={runDimensions} runColors={runColors} selection={selection} setSelection={setSelection} view={view} visibility={visibility} cameraPreset={cameraPreset} onStartEnvelopeResize={startEnvelopeResize} theme={theme}/>
         <div className="camera-tools">
           <button onClick={()=>setCamera("home")} title="Fit wardrobe in view"><I name="fit" size={15}/> Fit</button>
           <button onClick={()=>{setView("3d");setCamera("left")}} title="Left isometric">↙ Left</button>
@@ -841,9 +920,20 @@ export default function App() {
           <label>CONFIGURATION</label>
           <div className="field-grid">
             {currentItem.type==="drawer"&&<NumberField label="Drawer count" value={currentItem.drawers||3} unit="" step={1} min={1} onChange={v=>patchItem({drawers:Math.min(8,v)})}/>}
-            {(currentItem.type==="cubby"||currentItem.type==="shoe")&&<NumberField label="Rows" value={currentItem.rows||2} unit="" step={1} min={1} onChange={v=>patchItem({rows:Math.min(8,v)})}/>}
-            {currentItem.type==="cubby"&&<NumberField label="Columns" value={currentItem.columns||2} unit="" step={1} min={1} onChange={v=>patchItem({columns:Math.min(6,v)})}/>}
+            {(currentItem.type==="cubby"||currentItem.type==="shoe")&&<NumberField label="Rows" value={currentItem.rows||2} unit="" step={1} min={1} onChange={v=>patchItem({rows:Math.min(8,v),...(currentItem.type==="cubby"?{rowBreaks:null}:{})})}/>} 
+            {currentItem.type==="cubby"&&<NumberField label="Columns" value={currentItem.columns||2} unit="" step={1} min={1} onChange={v=>patchItem({columns:Math.min(6,v),columnBreaks:null})}/>} 
+            {currentItem.type==="cubby"&&<NumberField label="Row separator" value={currentItem.rowGap??20} min={0} max={200} onChange={v=>patchItem({rowGap:v})}/>} 
+            {currentItem.type==="cubby"&&<NumberField label="Column separator" value={currentItem.columnGap??20} min={0} max={200} onChange={v=>patchItem({columnGap:v})}/>} 
+            {currentItem.type==="cubby"&&<NumberField label="Outer frame" value={currentItem.frameThickness??25} min={5} max={200} onChange={v=>patchItem({frameThickness:v})}/>} 
+            {currentItem.type==="cubby"&&<NumberField label="Depth inset" value={currentItem.depthInset??0} min={0} max={Math.max(0,(currentItem.depth||activeDepth-40)-50)} onChange={v=>patchItem({depthInset:v})}/>} 
           </div>
+          {currentItem.type==="cubby"&&<div className="cubby-layout-fields">
+            <p>Set each divider’s exact position from the top or left edge.</p>
+            <div className="field-grid">
+              {cubbyBreaks(currentItem,"row").map((value,index)=><NumberField key={`row-${index}`} label={`Row divider ${index+1} from top`} value={value} min={20} max={currentItem.h-20} onChange={next=>{const values=cubbyBreaks(currentItem,"row");values[index]=next;patchItem({rowBreaks:values.sort((a,b)=>a-b)})}}/>)}
+              {cubbyBreaks(currentItem,"column").map((value,index)=><NumberField key={`column-${index}`} label={`Column divider ${index+1} from left`} value={value} min={20} max={currentItem.width-20} onChange={next=>{const values=cubbyBreaks(currentItem,"column");values[index]=next;patchItem({columnBreaks:values.sort((a,b)=>a-b)})}}/>)}
+            </div>
+          </div>}
         </section>}
         {currentItem.type==="mirror"&&<section>
           <label>MIRROR SHAPE</label>
