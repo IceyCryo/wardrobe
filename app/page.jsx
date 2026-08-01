@@ -166,6 +166,27 @@ function Fitting({ item, selected, scale, xScale = scale, onSelect, onPointerDow
   return <div {...common}><span className="led-line"/></div>;
 }
 
+function PrintFitting({ item, itemIndex, section, dimensions }) {
+  const typeLabel=item.type.replace("-"," ");
+  const common={
+    "data-label":`${String(itemIndex+1).padStart(2,"0")} ${typeLabel}`,
+    className:`print-fitting p-${item.type} ${item.variant?`variant-${item.variant}`:""}`,
+    style:{
+      top:`${item.y/dimensions.height*100}%`,
+      height:`${Math.max(1,item.h/dimensions.height*100)}%`,
+      left:`${(item.x??20)/section.width*100}%`,
+      width:`${Math.min(item.width,section.width-20)/section.width*100}%`,
+      "--fitting-color":item.color||"#69737d",
+    },
+    title:typeLabel,
+  };
+  if(item.type==="rail")return <i {...common}><span className="print-rail-garments">▽　▽　▽</span></i>;
+  if(item.type==="drawer")return <i {...common}>{Array.from({length:item.drawers||3}).map((_,index)=><span className="print-drawer-front" key={index}/>)}</i>;
+  if(item.type==="cubby")return <i {...common}><span className="print-cubby-grid" style={{gridTemplateColumns:cubbyTracks(item,"column").map(value=>`${value}fr`).join(" "),gridTemplateRows:cubbyTracks(item,"row").map(value=>`${value}fr`).join(" ")}}>{Array.from({length:(item.rows||2)*(item.columns||2)}).map((_,index)=><b key={index}/>)}</span></i>;
+  if(item.type==="shoe")return <i {...common}>{Array.from({length:item.rows||3}).map((_,index)=><span className="print-shoe-rack" key={index}/>)}</i>;
+  return <i {...common}/>;
+}
+
 function EditableRun({ run, sections, height, scale, selection, onSelectSection, onSelectItem, onStartItemDrag, onStartDividerDrag, side = false }) {
   const total = sections.reduce((sum, section) => sum + section.width, 0);
   return <div className={`run-interior ${side ? "side-run-interior" : ""}`}>
@@ -969,7 +990,7 @@ export default function App() {
         {visibleRuns.map(run=>{
           const total=runs[run].reduce((sum,s)=>sum+s.width,0),dims=runDimensions[run];
           return <article key={run} className={`print-run unit-${run}`}><h2>{run} wardrobe <span>{runs[run].length} units</span></h2><div className="print-elevation">
-            {runs[run].map((section,sectionIndex)=><section key={section.id} style={{width:`${section.width/total*100}%`}}><em>{run[0].toUpperCase()}-{String(sectionIndex+1).padStart(2,"0")} · {section.width} mm</em>{section.items.map((item,itemIndex)=><i key={item.id} data-label={`${String(itemIndex+1).padStart(2,"0")} ${item.type.replace("-"," ")}`} className={`p-${item.type}`} style={{top:`${item.y/dims.height*100}%`,height:`${Math.max(1,item.h/dims.height*100)}%`,left:`${(item.x??20)/section.width*100}%`,width:`${Math.min(item.width,section.width-20)/section.width*100}%`}} title={item.type}/>)}</section>)}
+            {runs[run].map((section,sectionIndex)=><section key={section.id} style={{width:`${section.width/total*100}%`}}><em>{run[0].toUpperCase()}-{String(sectionIndex+1).padStart(2,"0")} · {section.width} mm</em>{section.items.map((item,itemIndex)=><PrintFitting key={item.id} item={item} itemIndex={itemIndex} section={section} dimensions={dims}/>)}</section>)}
           </div></article>;
         })}
       </div>

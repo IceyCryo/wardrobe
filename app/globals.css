@@ -150,3 +150,46 @@
   .schedule-symbol{display:inline-block;width:3mm;height:3mm;margin-right:1.5mm;vertical-align:middle;border:.3px solid #53616b;background:#89959d}.symbol-rail{height:.8mm;background:#252d33;border:0}.symbol-drawer{background:repeating-linear-gradient(0deg,#89949b 0 2px,#39444d 2px 3px)}.symbol-basket{background:repeating-linear-gradient(90deg,#dbe1e4 0 2px,#66747d 2px 3px)}.symbol-cubby{background:linear-gradient(90deg,transparent 45%,#46525b 45% 55%,transparent 55%),linear-gradient(0deg,transparent 45%,#46525b 45% 55%,transparent 55%),#aeb7bc}.symbol-shoe{background:repeating-linear-gradient(-10deg,#dce1e4 0 2px,#59666f 2px 3px)}.symbol-mirror{background:#b8ccd4;border:1px solid #65727b}.symbol-led{width:1mm;background:#e4ad38;border:0}
   .print-footer{position:absolute;left:11mm;right:11mm;bottom:5mm;border-top:1px solid #aab1b6;padding-top:1.5mm;font:5.5px "IBM Plex Mono";color:#77818a}
 }
+
+/* Readable, model-faithful drawing export. The elevation occupies about half
+   of the first A4 sheet; the fitting schedule starts on its own sheet. */
+@media print{
+  .print-page{height:auto;min-height:210mm;padding:9mm 11mm;overflow:visible;font-size:12px}
+  .print-page .print-header h1{font-size:18px}
+  .print-header p,.print-header>b,.print-summary span,.print-summary b,
+  .print-runs h2,.schedule-title,.print-elevation em,
+  .print-elevation .print-fitting:after,.fitting-schedule,.print-footer{font-size:12px;line-height:1.25}
+  .print-summary div{min-height:13mm;justify-content:center}
+  .print-runs{height:100mm;gap:4mm}
+  .print-runs h2{margin-bottom:2mm}
+  .print-elevation{border-width:2px;background:#e5e9eb}
+  .print-elevation section{border-right-width:2px}
+  .print-elevation em{left:2mm;bottom:2mm;padding:.6mm 1mm;background:#ffffffd9;color:#34414b}
+  .print-elevation .print-fitting{background:var(--fitting-color);overflow:visible}
+  .print-elevation .print-fitting:after{left:1.5mm;top:1.5mm;padding:.4mm .8mm;background:#ffffffd9;color:#17202a;z-index:3}
+  .print-elevation .p-shelf:after,.print-elevation .p-rail:after,.print-elevation .p-led:after{top:-5mm}
+  .print-elevation .p-shelf{background:var(--fitting-color);border-bottom:1.2mm solid color-mix(in srgb,var(--fitting-color),#fff 38%)}
+  .print-elevation .p-rail{background:#30383e}
+  .print-rail-garments{position:absolute;left:12%;right:12%;top:100%;height:12mm;display:flex;align-items:flex-start;justify-content:space-around;color:#59666f;font:18px "IBM Plex Mono";letter-spacing:.08em}
+  .print-elevation .p-drawer{display:flex;flex-direction:column;background:var(--fitting-color)}
+  .print-drawer-front{display:block;flex:1;border-bottom:1px solid #303a42;box-shadow:inset 0 -1mm #ffffff12}
+  .print-drawer-front:last-child{border-bottom:0}
+  .print-elevation .p-basket{background:repeating-linear-gradient(0deg,transparent 0 3mm,#66747d 3mm 3.5mm),repeating-linear-gradient(90deg,#dbe1e4 0 3mm,#66747d 3mm 3.5mm)}
+  .print-elevation .p-cubby{padding:0;background:var(--fitting-color)}
+  .print-cubby-grid{display:grid;width:100%;height:100%;gap:1mm;padding:1mm;background:var(--fitting-color)}
+  .print-cubby-grid b{display:block;background:#e3e7e9;border:1px solid #56616a}
+  .print-elevation .p-shoe{display:flex;flex-direction:column;justify-content:space-around;background:transparent;border:0}
+  .print-shoe-rack{display:block;height:1.2mm;background:var(--fitting-color);border:1px solid #48545d;transform:rotate(-4deg)}
+  .print-elevation .p-mirror{background:linear-gradient(135deg,#bdd0d8 0 42%,#f4fafb 43% 48%,#91a9b4 49% 100%)}
+  .print-elevation .p-mirror.variant-circle{border-radius:50%}
+  .print-elevation .p-mirror.variant-square{aspect-ratio:1;width:auto!important}
+  .print-elevation .p-mirror.variant-quarter{border-radius:100% 0 0 0;clip-path:polygon(0 0,100% 100%,0 100%)}
+  .print-elevation .p-led{background:var(--fitting-color);box-shadow:0 0 2mm var(--fitting-color)}
+  .print-elevation .p-divider{background:var(--fitting-color);min-width:1.5mm;border:1px solid #39444d}
+  .schedule-title{break-before:page;margin-top:0;padding-top:10mm;padding-bottom:3mm}
+  .fitting-schedule{font-size:12px;line-height:1.35}
+  .fitting-schedule th,.fitting-schedule td{padding:2mm 1.5mm}
+  .fitting-schedule thead{display:table-header-group}
+  .fitting-schedule tr{break-inside:avoid}
+  .print-footer{position:static;margin-top:6mm;padding-top:3mm}
+}
