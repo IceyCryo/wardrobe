@@ -1,6 +1,14 @@
-# Wardrobe Studio — macOS setup guide
+# Wardrobe Studio — beginner setup and user guide
 
-This guide is written for beginners. You do not need prior programming experience.
+This guide is written for first-time users. You do not need programming experience or previous knowledge of Terminal, PowerShell, or Command Prompt.
+
+Choose the setup guide for your computer:
+
+- [Windows setup](#windows-setup)
+- [macOS setup](#macos-setup)
+- [Using Wardrobe Studio](#using-wardrobe-studio)
+
+# macOS setup
 
 ## What you need
 
@@ -45,8 +53,6 @@ Homebrew installs developer tools safely from Terminal. Paste:
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
-
-The installer may ask for your Mac login password. The password will not appear while you type; this is normal. Press Return when finished.
 
 The installation can take several minutes. It may ask for your Mac login password. The password will not appear—not even as dots—while you type; this is normal. Type it and press Return.
 
@@ -138,6 +144,124 @@ To launch it again later:
 5. Run `npm run dev`.
 6. Open the local address shown in Terminal.
 
+# Windows setup
+
+## What you need
+
+- A Windows 10 or Windows 11 computer connected to the internet
+- About 1 GB of free disk space
+- Permission to install an application on the computer
+
+You will use **PowerShell**, a program included with Windows that accepts typed commands. Do not worry if you have never used it: each command you need is shown below.
+
+## 1. Download the project as a ZIP
+
+1. Open the webpage where the Wardrobe Studio source code is provided.
+2. If it is a GitHub page, select the green **Code** button.
+3. Select **Download ZIP**.
+4. Wait for the download to finish. It will normally appear in your **Downloads** folder.
+
+Download the complete ZIP rather than individual files so that all required files stay together.
+
+## 2. Extract the ZIP
+
+1. Open **File Explorer** by selecting the yellow folder icon on the taskbar, or press `Windows key + E`.
+2. Select **Downloads** on the left.
+3. Find the downloaded `.zip` file.
+4. Right-click the ZIP and select **Extract All...**.
+5. Leave the suggested location unchanged and select **Extract**.
+6. Windows opens the extracted folder. Its name may be `wardrobe`, `wardrobe-main`, or similar.
+7. Open that folder and confirm that it contains:
+   - `package.json`
+   - `package-lock.json`
+   - an `app` folder
+   - `README.md`
+
+Use this extracted folder in the following steps, not the ZIP file. If you see another folder with the same or a similar name inside it, open that folder and look again for `package.json`.
+
+## 3. Install Node.js
+
+Node.js is the program that runs Wardrobe Studio. `npm`, the tool that installs the project's required packages, is included with it.
+
+1. Open [https://nodejs.org](https://nodejs.org) in your web browser.
+2. Download the version marked **LTS** (Long Term Support). Do not choose the **Current** version.
+3. Open the downloaded `.msi` installer. It will normally be at the top-right of your browser or in **Downloads**.
+4. If Windows asks whether to allow the app to make changes, select **Yes**.
+5. In the installer, select **Next**.
+6. Accept the license agreement, then select **Next**.
+7. Keep the suggested installation location and features. Continue selecting **Next**.
+8. You do not need to select the option that automatically installs extra tools.
+9. Select **Install**, wait for it to finish, and then select **Finish**.
+
+## 4. Open the project folder in PowerShell
+
+1. Return to the extracted project folder in File Explorer.
+2. Make sure you are in the folder that contains `package.json`.
+3. Click the address bar at the top of File Explorer. The folder location becomes highlighted.
+4. Type `powershell` and press Enter.
+
+A blue or black PowerShell window opens in the correct folder. You will see a line ending in `>` with a blinking cursor. That is where commands are entered.
+
+Paste a command by right-clicking inside PowerShell or by pressing `Ctrl + V`. Press Enter after each command. Do not type the word `powershell` shown before some examples elsewhere on the internet.
+
+## 5. Confirm that Node.js is installed
+
+Enter these commands one at a time:
+
+```powershell
+node --version
+npm.cmd --version
+```
+
+Each command should display a version number, such as `v22.x.x` and `10.x.x`. Your numbers may be different.
+
+If either command says it is not recognized, close PowerShell, install Node.js using step 3, and then repeat step 4. If you installed Node.js while PowerShell was already open, simply closing and reopening PowerShell is often enough.
+
+## 6. Install the project packages
+
+Enter:
+
+```powershell
+npm.cmd install
+```
+
+Keep PowerShell open while it works. The first installation can take several minutes. It is finished when the line ending in `>` and the blinking cursor appear again.
+
+Messages beginning with `npm WARN` are usually informational. If you see `npm ERR!`, read the [Windows troubleshooting](#windows-troubleshooting) section below.
+
+## 7. Launch Wardrobe Studio
+
+Enter:
+
+```powershell
+npm.cmd run dev
+```
+
+Wait until PowerShell shows **Ready** and an address beginning with `http://localhost`, normally:
+
+[http://localhost:3000](http://localhost:3000)
+
+Hold `Ctrl` and click the address in PowerShell, or open Edge, Chrome, or Firefox and type the address into its address bar.
+
+Keep the PowerShell window open while using Wardrobe Studio. Closing it stops the local website. The website runs only on your computer; `localhost` does not mean that it has been published on the internet.
+
+To stop Wardrobe Studio:
+
+1. Return to PowerShell.
+2. Press `Ctrl + C` once.
+3. If PowerShell asks `Terminate batch job (Y/N)?`, type `Y` and press Enter.
+
+## 8. Open Wardrobe Studio again later
+
+You only need to install Node.js and run `npm.cmd install` once. The next time you want to use the app:
+
+1. Open the extracted project folder in File Explorer.
+2. Click the address bar, type `powershell`, and press Enter.
+3. Enter `npm.cmd run dev`.
+4. Wait for the local address to appear, then open it in your browser.
+
+Do not double-click `package.json` or any of the code files to launch the app; start it with the command above.
+
 ## Using Wardrobe Studio
 
 ### Views
@@ -221,9 +345,9 @@ Shortcuts work when a number field or menu is not focused.
 | W twice / S twice | Hold the second press to move up / down |
 | Shift + W / A / S / D | Look up, left, down, or right without moving |
 | Delete or Backspace | Delete the selected fitting or section |
-| Command + D | Duplicate the selected fitting |
-| Command + Z | Undo the last design change |
-| Command + Shift + Z | Redo the last undone change |
+| Command + D (Mac) / Ctrl + D (Windows) | Duplicate the selected fitting |
+| Command + Z (Mac) / Ctrl + Z (Windows) | Undo the last design change |
+| Command + Shift + Z (Mac) / Ctrl + Shift + Z (Windows) | Redo the last undone change |
 | Escape | Leave fitting selection and select its section |
 
 Number fields have their own controls:
@@ -240,7 +364,7 @@ You can temporarily erase a number or type a partial value. Limits are checked o
 
 Choose **Export drawing** to open the browser print dialog. Select **Save as PDF** to create a technical drawing PDF.
 
-## Troubleshooting
+## macOS troubleshooting
 
 ### `brew: command not found`
 
@@ -258,13 +382,55 @@ Next.js normally offers another address such as `http://localhost:3001`. Open th
 
 Refresh the browser with `Command + R`. If necessary, stop the server with `Control + C`, then run `npm run dev` again.
 
-### Start with a production build
+## Windows troubleshooting
 
-For a final optimized version, run:
+### `node` or `npm.cmd` is not recognized
+
+Close every PowerShell window and open a new one from the project folder. Try the command again. If it still fails, reinstall the **LTS** version of Node.js and keep the installer's default features selected.
+
+### PowerShell says that running scripts is disabled
+
+Use `npm.cmd` instead of `npm`. For example:
+
+```powershell
+npm.cmd install
+npm.cmd run dev
+```
+
+These commands do not require you to change PowerShell's security settings.
+
+### PowerShell cannot find `package.json`
+
+PowerShell is open in the wrong folder. Close it, find the extracted folder containing `package.json` in File Explorer, click the address bar, type `powershell`, and press Enter. Then retry the command.
+
+### Port 3000 is already in use
+
+Next.js normally chooses another address, such as `http://localhost:3001`. Open the exact address displayed in PowerShell.
+
+### Windows Firewall displays a security alert
+
+If the alert appears immediately after `npm.cmd run dev`, allow **Private networks** only, then select **Allow access**. You do not need to allow Public networks to use the app on your own computer.
+
+### The browser says that it cannot reach the page
+
+Check that the PowerShell window is still open and that `npm.cmd run dev` is still running. Use the exact address displayed there. If needed, press `Ctrl + C`, run `npm.cmd run dev` again, and refresh the browser with `Ctrl + R`.
+
+## Optional: start with an optimized production build
+
+The normal `dev` command above is recommended while designing. If you need an optimized version instead, stop the running app with `Control + C` on Mac or `Ctrl + C` on Windows, then run the commands for your computer.
+
+On macOS:
 
 ```bash
 npm run build
 npm start
+```
+
+On Windows:
+
+```powershell
+npm.cmd run build
+npm.cmd start
 ```
 
 Then open [http://localhost:3000](http://localhost:3000).
